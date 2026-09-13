@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="ur">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Foodie Match Mania</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Poppins', sans-serif; user-select: none; -webkit-user-select: none; }
+    body { background: radial-gradient(circle, #1a1a2e 0%, #16213e 50%, #0f3460 100%); color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; overflow: hidden; touch-action: none; }
+
+    /* Loading Screen */
+    #loading-screen {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(15, 12, 41, 0.95); display: flex; flex-direction: column;
+      align-items: center; justify-content: center; z-index: 10;
+    }
+    .logo-title { font-size: 38px; font-weight: bold; color: #ff4757; text-shadow: 0 0 15px #ff6b81; margin-bottom: 5px; text-transform: uppercase; text-align: center; }
+    .sub-title { font-size: 14px; color: #eccc68; margin-bottom: 25px; letter-spacing: 2px; text-transform: uppercase; font-weight: 600; }
+    .loader { width: 220px; height: 16px; background: #333; border-radius: 10px; overflow: hidden; border: 1px solid #555; }
+    .loader-bar { width: 0%; height: 100%; background: linear-gradient(90deg, #ff4757, #ffa502); transition: width 0.3s; }
+    .loading-text { margin-top: 15px; font-size: 14px; color: #aaa; }
+
+    /* Screen Overlay for Device Selection */
+    .screen {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background: rgba(15, 12, 41, 0.95);
+      z-index: 9;
+      padding: 20px;
+      text-align: center;
+    }
+    .btn {
+      background: linear-gradient(135deg, #ff4757, #ff6b81);
+      color: white;
+      border: none;
+      padding: 12px 28px;
+      margin: 8px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      border-radius: 30px;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(255, 71, 87, 0.4);
+      transition: all 0.2s ease;
+      width: 220px;
+    }
+    .btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(255, 71, 87, 0.6); }
+    .btn:active { transform: translateY(1px); }
+
+    /* Game Container */
+    #game-container { display: none; flex-direction: column; align-items: center; background: rgba(0, 0, 0, 0.4); padding: 20px; border-radius: 16px; backdrop-filter: blur(5px); box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
+    
+    #game-container.mobile-mode {
+      width: 100vw !important;
+      height: 100vh !important;
+      border-radius: 0 !important;
+      border: none !important;
+      box-shadow: none !important;
+      justify-content: center;
+    }
+
+    .header { text-align: center; margin-bottom: 10px; }
+    .game-title { font-size: 28px; color: #ffa502; text-shadow: 2px 2px #000; }
+    
+    .stats { display: flex; gap: 10px; margin: 10px 0; font-size: 14px; font-weight: bold; flex-wrap: wrap; justify-content: center; }
+    .stat-box { background: rgba(255, 255, 255, 0.1); padding: 5px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); }
+
+    /* Controls */
+    .controls { display: flex; gap: 10px; margin-bottom: 10px; justify-content: center; align-items: center; }
+    select { padding: 5px 10px; border-radius: 5px; background: #0f3460; color: #fff; border: 1px solid #ff4757; outline: none; cursor: pointer; }
+
+    /* Grid */
+    #board {
+      display: grid; grid-template-columns: repeat(6, 55px); grid-template-rows: repeat(6, 55px);
+      gap: 5px; background: #16213e; padding: 10px; border-radius: 12px;
+      box-shadow: inset 0 0 10px rgba(0,0,0,0.8); border: 2px solid #ff4757;
+    }
+    .cell {
+      width: 55px; height: 55px; background: rgba(255,255,255,0.05); border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px; cursor: pointer; user-select: none; transition: transform 0.1s, background 0.2s;
+    }
+    .cell:hover { background: rgba(255,255,255,0.15); }
+    .selected { border: 3px solid #ffa502; transform: scale(1.08); }
+
+    /* Footer Branding */
+    .footer-brand { margin-top: 12px; font-size: 11px; color: #eccc68; letter-spacing: 1px; font-weight: bold; }
+  </style>
+</head>
+<body>
+
+  <div id="loading-screen">
+    <div class="logo-title">🍕 FOODIE MATCH MANIA 🍔</div>
+    <div class="sub-title">AZAN OFFICIAL GAME PAKISTAN</div>
+    <div class="loader"><div class="loader-bar" id="loader-bar"></div></div>
+    <div class="loading-text" id="loading-text">Preparing Level 1...</div>
+  </div>
+
+  <!-- Device Selection Screen -->
+  <div id="device-screen" class="screen" style="display: none;">
+    <div class="logo-title" style="font-size: 30px;">Select Mode</div>
+    <p style="color: #eccc68; margin-bottom: 25px;">Choose how you want to play</p>
+    <button class="btn" onclick="selectDevice('laptop')">💻 LAPTOP MODE</button>
+    <button class="btn" onclick="selectDevice('mobile')">📱 MOBILE MODE</button>
+  </div>
+
+  <div id="game-container">
+    <div class="header">
+      <h1 class="game-title">FOODIE MATCH MANIA</h1>
+      <div class="stats">
+        <div class="stat-box">Level: <span id="level-num" style="color:#ffa502;">1</span>/100</div>
+        <div class="stat-box">Target: <span id="target-score" style="color:#2ed573;">100</span></div>
+        <div class="stat-box">Score: <span id="score" style="color:#1e90ff;">0</span></div>
+        <div class="stat-box">Moves: <span id="moves" style="color:#ff4757;">20</span></div>
+      </div>
+      <div class="controls">
+        <label for="difficulty">Difficulty: </label>
+        <select id="difficulty" onchange="changeDifficulty()">
+          <option value="easy">Easy</option>
+          <option value="medium" selected>Medium</option>
+          <option value="hard">Hard</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="board"></div>
+    <div class="footer-brand">AZAN OFFICIAL GAME PAKISTAN</div>
+  </div>
+
+  <script>
+    // Loading Screen Logic
+    let progress = 0;
+    const loaderBar = document.getElementById('loader-bar');
+    const loadingText = document.getElementById('loading-text');
+    const loadingScreen = document.getElementById('loading-screen');
+    const deviceScreen = document.getElementById('device-screen');
+    const gameContainer = document.getElementById('game-container');
+
+    const loadInterval = setInterval(() => {
+      progress += 20;
+      loaderBar.style.width = progress + '%';
+      if (progress === 40) loadingText.innerText = "Baking Pizzas & Cooking Fries...";
+      if (progress === 80) loadingText.innerText = "Loading 100 Foodie Levels...";
+      if (progress >= 100) {
+        clearInterval(loadInterval);
+        setTimeout(() => {
+          loadingScreen.style.display = 'none';
+          deviceScreen.style.display = 'flex';
+        }, 400);
+      }
+    }, 300);
+
+    function selectDevice(device) {
+      if (device === 'mobile') {
+        gameContainer.classList.add('mobile-mode');
+      } else {
+        gameContainer.classList.remove('mobile-mode');
+      }
+      deviceScreen.style.display = 'none';
+      gameContainer.style.display = 'flex';
+      initLevel();
+    }
+
+    // Game Variables
+    const width = 6;
+    const items = ['🍕', '🍔', '🥙', '🌯', '🍟'];
+    let board = [];
+    let currentLevel = 1;
+    let score = 0;
+    let targetScore = 100;
+    let moves = 20;
+    let difficulty = 'medium';
+    let firstSelected = null;
+
+    const boardElement = document.getElementById('board');
+    const scoreElement = document.getElementById('score');
+    const movesElement = document.getElementById('moves');
+    const levelElement = document.getElementById('level-num');
+    const targetElement = document.getElementById('target-score');
+
+    function changeDifficulty() {
+      difficulty = document.getElementById('difficulty').value;
+      initLevel();
+    }
+
+    function initLevel() {
+      score = 0;
+      scoreElement.innerText = score;
+      levelElement.innerText = currentLevel;
+
+      targetScore = currentLevel * 100;
+      targetElement.innerText = targetScore;
+
+      let baseMoves = 25 - Math.floor(currentLevel / 10);
+      if (difficulty === 'easy') moves = baseMoves + 5;
+      else if (difficulty === 'medium') moves = baseMoves;
+      else if (difficulty === 'hard') moves = Math.max(10, baseMoves - 5);
+
+      movesElement.innerText = moves;
+      createBoard();
+    }
+
+    function createBoard() {
+      boardElement.innerHTML = '';
+      board = [];
+      for (let r = 0; r < width; r++) {
+        let row = [];
+        for (let c = 0; c < width; c++) {
+          let randomItem = items[Math.floor(Math.random() * items.length)];
+          row.push(randomItem);
+
+          let cell = document.createElement('div');
+          cell.classList.add('cell');
+          cell.dataset.row = r;
+          cell.dataset.col = c;
+          cell.innerText = randomItem;
+          cell.addEventListener('click', handleCellClick);
+          boardElement.appendChild(cell);
+        }
+        board.push(row);
+      }
+      checkMatches();
+    }
+
+    function renderBoard() {
+      const cells = document.querySelectorAll('.cell');
+      cells.forEach(cell => {
+        let r = cell.dataset.row;
+        let c = cell.dataset.col;
+        cell.innerText = board[r][c];
+        cell.classList.remove('selected');
+      });
+    }
+
+    function handleCellClick(e) {
+      if (moves <= 0) return;
+
+      let cell = e.currentTarget;
+      let r = parseInt(cell.dataset.row);
+      let c = parseInt(cell.dataset.col);
+
+      if (!firstSelected) {
+        firstSelected = { r, c, element: cell };
+        cell.classList.add('selected');
+      } else {
+        let r1 = firstSelected.r, c1 = firstSelected.c;
+        let r2 = r, c2 = c;
+
+        let isAdjacent = (Math.abs(r1 - r2) + Math.abs(c1 - c2)) === 1;
+
+        if (isAdjacent) {
+          let temp = board[r1][c1];
+          board[r1][c1] = board[r2][c2];
+          board[r2][c2] = temp;
+
+          renderBoard();
+          let matched = checkMatches();
+
+          if (matched) {
+            moves--;
+            movesElement.innerText = moves;
+            checkLevelStatus();
+          } else {
+            setTimeout(() => {
+              let temp = board[r1][c1];
+              board[r1][c1] = board[r2][c2];
+              board[r2][c2] = temp;
+              renderBoard();
+            }, 250);
+          }
+        }
+        firstSelected.element.classList.remove('selected');
+        firstSelected = null;
+      }
+    }
+
+    function checkMatches() {
+      let matched = false;
+      let toRemove = Array.from({ length: width }, () => Array(width).fill(false));
+
+      for (let r = 0; r < width; r++) {
+        for (let c = 0; c < width - 2; c++) {
+          let val = board[r][c];
+          if (val && val === board[r][c+1] && val === board[r][c+2]) {
+            toRemove[r][c] = toRemove[r][c+1] = toRemove[r][c+2] = true;
+            matched = true;
+          }
+        }
+      }
+
+      for (let c = 0; c < width; c++) {
+        for (let r = 0; r < width - 2; r++) {
+          let val = board[r][c];
+          if (val && val === board[r+1][c] && val === board[r+2][c]) {
+            toRemove[r][c] = toRemove[r+1][c] = toRemove[r+2][c] = true;
+            matched = true;
+          }
+        }
+      }
+
+      if (matched) {
+        for (let r = 0; r < width; r++) {
+          for (let c = 0; c < width; c++) {
+            if (toRemove[r][c]) {
+              board[r][c] = items[Math.floor(Math.random() * items.length)];
+              score += 10;
+            }
+          }
+        }
+        scoreElement.innerText = score;
+        renderBoard();
+        setTimeout(checkMatches, 300);
+      }
+      return matched;
+    }
+
+    function checkLevelStatus() {
+      if (score >= targetScore) {
+        setTimeout(() => {
+          if (currentLevel < 100) {
+            alert(`🎉 Level ${currentLevel} Cleared! Moving to Level ${currentLevel + 1}`);
+            currentLevel++;
+            initLevel();
+          } else {
+            alert("🏆 Congratulations! Aap ne saare 100 Levels complete kar liye hain!");
+          }
+        }, 300);
+      } else if (moves <= 0) {
+        setTimeout(() => {
+          alert(`❌ Game Over! Target poora nahi hua. Level ${currentLevel} dobara try karein.`);
+          initLevel();
+        }, 300);
+      }
+    }
+  </script>
+</body>
+</html>
